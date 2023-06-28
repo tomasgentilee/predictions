@@ -27,29 +27,28 @@ public class RegresionLinealMultiple {
                 {190}
         };
 
-        double[][] matriz = performMultipleLinearRegression(trainingData, trainingDataY);
-
-        System.out.println("Ingrese el valor a predecir:");
+        double[][] multiLinRegEq = performMultipleLinearRegression(trainingData, trainingDataY);
 
         Scanner scn = new Scanner(System.in);
-        double input = scn.nextInt();
+        double [] data2predict = new double[trainingData[0].length];
 
-        System.out.println();
-
-
-
-        /*
-        int numRows = matriz.length;
-        int numCols = matriz[0].length;
-
-        for (int row = 0; row < numRows; row++) {
-            for (int col = 0; col < numCols; col++) {
-                System.out.print(matriz[row][col] + " ");
-            }
-            System.out.println();
+        System.out.println("Ingrese los valores a predecir:");
+        for (int i = 0; i < trainingData[0].length; i++){
+            data2predict[i] = scn.nextInt();
         }
 
-         */
+        double prediction = predict(data2predict, multiLinRegEq);
+        double[] estimationError = estimationErrorAndDeterminationCoe(trainingData, multiLinRegEq, trainingDataY);
+
+        System.out.println("Predicción:");
+        System.out.println(prediction);
+
+        System.out.println("Error de estimación");
+        System.out.println(estimationError[0]);
+
+        System.out.println("Coeficiente de determinación");
+        System.out.println(estimationError[1] * 100 + "%");
+
     }
 
     public static double[][] performMultipleLinearRegression(double[][] data, double[][] trainingDataY) {
@@ -78,20 +77,87 @@ public class RegresionLinealMultiple {
 
         double[][] modeloRegMultiple = productoMatricial.productoMatriz(matrizGaussJordan, prodMaTxY);
 
+
         return modeloRegMultiple;
 
     };
 
-    public static double predict(double input, double[][] multipleEquation) {
+    public static double predict(double[] input, double[][] modeloRegMultiple) {
 
-        double prediction = 0;
+        double prediction = modeloRegMultiple[0][0];
 
 
-        for (int i = 0; i < multipleEquation.length; i ++){
-            prediction += multipleEquation[0][i];
+        for (int i = 0; i < input.length; i ++){
+            prediction += input[i] * modeloRegMultiple[i+1][0];
         }
 
         return prediction;
+    }
+
+    public static double[] estimationErrorAndDeterminationCoe(double[][] trainingData, double[][] modeloRegMultiple, double[][] trainingDataY) {
+
+        double[] promiseY = new double[trainingData.length];
+        double[] promiseY4Reg = new double[trainingData.length];
+        double prediction = modeloRegMultiple[0][0];
+        double sumSquareErr = 0;
+        double sumSquareReg = 0;
+        double sumY = 0;
+        double promY = 0;
+        double R2 = 0;
+
+        //calculamos el pronostico para Y con nuestro modelo
+        for (int i = 0; i < trainingData.length; i ++){
+            double sumYpromise = 0;
+            for (int j = 0; j < modeloRegMultiple.length-1; j ++){
+                sumYpromise += trainingData[i][j] * modeloRegMultiple[j+1][0];
+            }
+            promiseY[i] += prediction + sumYpromise;
+        }
+
+        //CALCULO ERROR ESTANDAR DE ESTIMACIÓN
+
+        //le restamos a nuestro Y el pronostico de Y
+        for (int i = 0; i < trainingData.length; i ++){
+            promiseY[i] = trainingDataY[i][0] - promiseY[i];
+        }
+
+        //suma de cuadrados del error
+        for (int i = 0; i < trainingData.length; i ++){
+            sumSquareErr += promiseY[i] * promiseY[i];
+        }
+
+        //calculamos el error estandar de la estimación
+        double sYK = Math.sqrt((sumSquareErr)/(trainingData.length - modeloRegMultiple.length));
+
+
+        //CALCULO COEFICIENTE DE DETERMINACIÓN
+
+        //calculamos la media de Y
+        for (int i = 0; i < trainingDataY.length; i ++){
+            sumY += trainingDataY[i][0];
+        }
+
+        promY = sumY/trainingData.length;
+
+        //realizamos la suma de cuadrados de la regresión la cual es la sumatoría de:
+        //(promiseY[n]-promY[n])^2
+
+        for (int i = 0; i < trainingData.length; i ++){
+            double sumYpromiseReg = 0;
+            for (int j = 0; j < modeloRegMultiple.length-1; j ++){
+                sumYpromiseReg += trainingData[i][j] * modeloRegMultiple[j+1][0];
+            }
+            promiseY4Reg[i] += (prediction + sumYpromiseReg - promY) * (prediction + sumYpromiseReg - promY);
+        }
+
+        for (int i = 0; i < promiseY4Reg.length; i ++){
+            sumSquareReg += promiseY4Reg[i];
+        }
+
+        R2 = sumSquareReg / (sumSquareReg + sumSquareErr);
+
+
+        return new double[] {sYK, R2};
     }
 
 }
